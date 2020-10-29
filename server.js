@@ -4,18 +4,25 @@ const server = require("http").Server(app);
 const io = require("socket.io")(server);
 const { v4: uuidV4 } = require("uuid");
 
+// Setting express' view engine to esj
 app.set("view engine", "ejs");
+
+// Instructing express to serve files from the 'public' directory
 app.use(express.static("public"));
 
+// Redirects requests without a roomId provided by redirecting to a randomly generated roomId
 app.get("/", (req, res) => {
   res.redirect(`/${uuidV4()}`);
 });
 
+// Renders the "room" file on a given roomId, passing in the roomId variable to the esj file to use
 app.get("/:room", (req, res) => {
   res.render("room", { roomId: req.params.room });
 });
 
+// Handles the socket connection
 io.on("connection", (socket) => {
+  // Listen and react to "join-room event"
   socket.on("join-room", (roomId, userId) => {
     // Join the room
     socket.join(roomId);
@@ -29,4 +36,5 @@ io.on("connection", (socket) => {
   });
 });
 
+// Listen on port 3000
 server.listen(3000);

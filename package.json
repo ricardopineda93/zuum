@@ -1,7 +1,7 @@
 {
   "name": "zuum",
   "version": "1.0.0",
-  "description": "Zoom clone for teh keks",
+  "description": "Basic browser-based video call",
   "main": "server.js",
   "scripts": {
     "dev-start-app": "nodemon server.js",
