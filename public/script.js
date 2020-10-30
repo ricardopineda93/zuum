@@ -9,6 +9,9 @@ myVideoElement.muted = true;
 // Global var for tracking peer connections
 const peers = {};
 
+let userId;
+let displayName;
+
 // If the navigator singleton does not allow us to access media devices, alert the user and stop trying to run rest of script.
 if (!navigator.mediaDevices)
   alert(
@@ -40,20 +43,30 @@ navigator.mediaDevices
     // Then have the socket listen for any new user connection events, connect to/ "call"
     // the new user via webRTC, and then add that new connected user's video stream to the UI
     socket.on("user-connected", (joiningUserId) => {
+      console.log(`[${joiningUserId}] has JOINED the call!`);
       connectToNewUser(joiningUserId, userStream);
     });
-  });
 
-// Listens for when another user disconnects, and closes that Peer call
-socket.on("user-disconnected", (disconnectedUserId) => {
-  if (peers[disconnectedUserId]) peers[disconnectedUserId].close();
-  alert(`${disconnectedUserId} has left the call!`);
-});
+    // Print the zuum welcome and chat instructions to the console.
+    printChatWelcomeMessage();
+  });
 
 // Establish a connection with the RTC server, and once that is done,
 myPeer.on("open", (peerConnectionId) => {
   // Emit the join-room event with the roomId and the userId
   socket.emit("join-room", ROOM_ID, peerConnectionId);
+  userId = peerConnectionId;
+});
+
+socket.on("new-chat-message", (incomingMessage, sendingUserId) => {
+  console.log(`[${sendingUserId}]: ${incomingMessage}`);
+});
+
+// Listens for when another user disconnects, and closes that Peer call
+socket.on("user-disconnected", (disconnectedUserId) => {
+  if (peers[disconnectedUserId]) peers[disconnectedUserId].close();
+  console.log(`[${disconnectedUserId}] has LEFT the call!`);
+  alert(`${disconnectedUserId} has left the call!`);
 });
 
 /*-----------------------------------------------*
@@ -92,4 +105,21 @@ function connectToNewUser(incomingUserId, thisUserStream) {
 
   // Finally, add this new peer stream to our variable that tracks our current peer connections
   peers[incomingUserId] = call;
+}
+
+// Welcome user to the console chat
+function printChatWelcomeMessage() {
+  console.info(`Welcome to zuum's console.chat!\n\nTo set a custom display name for yourself, use: setDisplayName("yourNameHere")\n\nTo send a message to the room, use: send("Hello, everyone!")
+`);
+}
+
+// Handles sending message to room on behalf of user
+function send(message) {
+  socket.emit("send-chat", message, displayName || userId);
+}
+
+// Allows user to set a custom display name
+function setDisplayName(name) {
+  displayName = name;
+  console.log(`You have changed your chat display name to: "${name}"`);
 }
