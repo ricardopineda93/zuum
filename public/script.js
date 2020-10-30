@@ -2,16 +2,16 @@ const socket = io("/");
 const videoGrid = document.getElementById("video-grid");
 const myPeer = new Peer(undefined, { host: "/", port: "3001" });
 
-// Create and mute the video element for the client
+// Create and mute the video element for the user client
 const myVideoElement = document.createElement("video");
 myVideoElement.muted = true;
 
-// Global var for tracking peer connections
+// Global maps for tracking peer connections and userId:displayNames mappings
 const peers = {};
-const userIdDisplayNameMap = {};
+const userIdsToDisplayNames = {};
 
+// Global vars for tracking the user's userId
 let userId;
-let displayName;
 
 // If the navigator singleton does not allow us to access media devices, alert the user and stop trying to run rest of script.
 if (!navigator.mediaDevices)
@@ -60,13 +60,17 @@ myPeer.on("open", (peerConnectionId) => {
 });
 
 socket.on("new-chat-message", (incomingMessage, sendingUserId) => {
-  console.log(`[${sendingUserId}]: ${incomingMessage}`);
+  console.log(
+    `[${
+      userIdsToDisplayNames[sendingUserId] || sendingUserId
+    }]: ${incomingMessage}`
+  );
 });
 
 socket.on(
   "new-display-name-registered",
   (userId, newDisplayName, oldDisplayName) => {
-    userIdDisplayNameMap[userId] = newDisplayName;
+    userIdsToDisplayNames[userId] = newDisplayName;
     console.log(
       `"${
         oldDisplayName || userId
@@ -78,7 +82,11 @@ socket.on(
 // Listens for when another user disconnects, and closes that Peer call
 socket.on("user-disconnected", (disconnectedUserId) => {
   if (peers[disconnectedUserId]) peers[disconnectedUserId].close();
-  console.log(`[${disconnectedUserId}] has LEFT the call!`);
+  console.log(
+    `[${
+      userIdsToDisplayNames[disconnectedUserId] || disconnectedUserId
+    }] has LEFT the call!`
+  );
   alert(`${disconnectedUserId} has left the call!`);
 });
 
@@ -128,23 +136,26 @@ function printChatWelcomeMessage() {
 
 // Handles sending message to room on behalf of user
 function send(message) {
-  socket.emit("send-chat", message, displayName || userId);
-  return `Sent ✅`;
+  socket.emit("send-chat", message, userIdsToDisplayNames[userId] || userId);
+  return "sent message ✅";
 }
 
-// Allows user to set a custom display name
+// Allows user to attempt to set a custom display name for the chat
+// TODO: Figure out a way to save the userId : displayName mapping server side, new users
+// won't have access to existing mapping and can also take an "already in use" display name
 function setDisplayName(newDisplayName) {
-  const displayNameIsTaken = !!Object.values(userIdDisplayNameMap).find(
+  const displayNameIsTaken = !!Object.values(userIdsToDisplayNames).find(
     (existingDisplayName) => existingDisplayName === newDisplayName
   );
   if (displayNameIsTaken) console.error(`${newDisplayName} is already in use!`);
   else {
-    const userOldDisplayName = userIdDisplayNameMap[userId];
+    const userOldDisplayName = userIdsToDisplayNames[userId];
     socket.emit(
       "register-display-name",
       userId,
       newDisplayName,
       userOldDisplayName
     );
+    return "set display name ✅";
   }
 }
