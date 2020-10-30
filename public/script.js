@@ -8,6 +8,7 @@ myVideoElement.muted = true;
 
 // Global var for tracking peer connections
 const peers = {};
+const userIdDisplayNameMap = {};
 
 let userId;
 let displayName;
@@ -61,6 +62,18 @@ myPeer.on("open", (peerConnectionId) => {
 socket.on("new-chat-message", (incomingMessage, sendingUserId) => {
   console.log(`[${sendingUserId}]: ${incomingMessage}`);
 });
+
+socket.on(
+  "new-display-name-registered",
+  (userId, newDisplayName, oldDisplayName) => {
+    userIdDisplayNameMap[userId] = newDisplayName;
+    console.log(
+      `"${
+        oldDisplayName || userId
+      }" has changed their display name to: "${newDisplayName}"`
+    );
+  }
+);
 
 // Listens for when another user disconnects, and closes that Peer call
 socket.on("user-disconnected", (disconnectedUserId) => {
@@ -116,10 +129,22 @@ function printChatWelcomeMessage() {
 // Handles sending message to room on behalf of user
 function send(message) {
   socket.emit("send-chat", message, displayName || userId);
+  return `Sent ✅`;
 }
 
 // Allows user to set a custom display name
-function setDisplayName(name) {
-  displayName = name;
-  console.log(`You have changed your chat display name to: "${name}"`);
+function setDisplayName(newDisplayName) {
+  const displayNameIsTaken = !!Object.values(userIdDisplayNameMap).find(
+    (existingDisplayName) => existingDisplayName === newDisplayName
+  );
+  if (displayNameIsTaken) console.error(`${newDisplayName} is already in use!`);
+  else {
+    const userOldDisplayName = userIdDisplayNameMap[userId];
+    socket.emit(
+      "register-display-name",
+      userId,
+      newDisplayName,
+      userOldDisplayName
+    );
+  }
 }

@@ -28,10 +28,22 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     // Broadcast to everyone in the room that this new user has joined except for joining user
     socket.to(roomId).broadcast.emit("user-connected", userId);
-    //On a user sending a chat message, broadcast to the room there is a new chat message
+    // On a user sending a chat message, broadcast to the room there is a new chat message
     socket.on("send-chat", (message, sendingUserId = "unknown-connection") => {
       io.in(roomId).emit("new-chat-message", message, sendingUserId);
     });
+    // Listen for when users register a display name for the chat
+    socket.on(
+      "register-display-name",
+      (userId, newDisplayName, oldDisplayName = "") => {
+        io.in(roomId).emit(
+          "new-display-name-registered",
+          userId,
+          newDisplayName,
+          oldDisplayName
+        );
+      }
+    );
     // Listen for when this user disconnects, broadcast a message to the room that the user has left with the disconnected user's Id
     socket.on("disconnect", () => {
       socket.to(roomId).broadcast.emit("user-disconnected", userId);
