@@ -40,6 +40,7 @@ io.on("connection", (socket) => {
 
     // Broadcast to everyone in the room that this new user has joined except for joining user
     socket.to(roomId).broadcast.emit("user-connected", userId);
+
     // On a user sending a chat message, broadcast to the room there is a new chat message
     socket.on("send-chat", (message) => {
       const sendingUser = roomsCache[roomId][socket.id];
@@ -48,8 +49,8 @@ io.on("connection", (socket) => {
 
     // Listen for when users register a display name for the chat
     socket.on("register-display-name", (newDisplayName) => {
-      const room = roomsCache[roomId];
-      const displayNameIsTaken = !!Object.values(room).find(
+      const usersInRoom = Object.values(roomsCache[roomId]);
+      const displayNameIsTaken = !!usersInRoom.find(
         (user) => user.displayName === newDisplayName
       );
       if (displayNameIsTaken)
