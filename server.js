@@ -1,4 +1,3 @@
-const e = require("express");
 const express = require("express");
 const app = express();
 const server = require("http").Server(app);
@@ -38,6 +37,7 @@ io.on("connection", (socket) => {
         roomsCache[roomId][socket.id] = { userId, displayName: userId };
       }
     });
+
     // Broadcast to everyone in the room that this new user has joined except for joining user
     socket.to(roomId).broadcast.emit("user-connected", userId);
     // On a user sending a chat message, broadcast to the room there is a new chat message
@@ -45,6 +45,7 @@ io.on("connection", (socket) => {
       const sendingUser = roomsCache[roomId][socket.id];
       io.in(roomId).emit("new-chat-message", message, sendingUser);
     });
+
     // Listen for when users register a display name for the chat
     socket.on("register-display-name", (newDisplayName) => {
       const room = roomsCache[roomId];
